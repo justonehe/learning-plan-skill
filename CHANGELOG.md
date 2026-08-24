@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.6.0
+
+- 固定资料唯一入口:`labs/` 放实际作业,`videos/` 放逐集介绍/字幕,`readings/` 放论文,`coursepacks/` 只放课程映射与官方 lecture 静态原件。
+- 禁止在 coursepack 内重复创建 `labs/assignments/videos/readings/supplements`;外部作业 submodule 直接落到根级 `labs/`，不用软链接伪装入口。
+- 播放列表每集必须有真实字幕依据的介绍、来源、主线/预习/拓展角色与 Stage 映射;只有链接或字幕不算完成。
+- 新增批量拉取纪律:先展示最终目录树,先验证 1 个 Lab + 1 个视频再批量,完成前检查入口非空、非软链接、无旧路径与半移动 submodule。
+- CLI 新增 `audit`;`course` 不再制造重复资料子目录,URL syllabus 保存为 `syllabus.url`;`video` 新增 overview/stage/role 字段。
+- smoke test 新增规范目录、URL syllabus、视频介绍和 layout audit 验证。
+- 同步本地既有修订:读字幕只用于核对、不构成学习期预讲许可;“是否学过/讨论过/完成”以 dialogue/raw/git history 优先于派生的 notes/state。
+
 ## v0.4.0(对照 v0.3.0 审计报告修订)
 
 边界(A 类):

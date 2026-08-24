@@ -14,10 +14,10 @@
 ## Available materials
 
 - Syllabus / schedule:
-- Slides / lecture notes:
-- Videos:
-- Labs / assignments:
-- Readings:
+- Official lecture materials: `materials/`
+- Videos: root-level `../../videos/`
+- Labs / assignments: root-level `../../labs/`
+- Readings: root-level `../../readings/`
 
 ## Prerequisites
 
@@ -31,4 +31,5 @@
 ## Use policy
 
 - 不默认完整学完本课程,只抽取服务当前目标的部分(记录于 extracted-parts.md)。
-- 同一学期配套:本资料包内讲义、视频、lab 取同一学期版本;跨年差异记入 synthesis/conflicts.md。
+- 同一学期配套:lecture 原件、视频和 lab 必须版本对应;跨年差异记入 synthesis/conflicts.md。
+- coursepack 只保存身份、schedule 与 `materials/` 静态原件。实际作业放根级 `labs/`,视频放根级 `videos/`,论文放根级 `readings/`;不得在本目录重复建入口。

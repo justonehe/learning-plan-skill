@@ -58,11 +58,19 @@ description: 自学陪伴 skill:为用户的学习主题完成摸底、计划生
 
 也不用提问或选项菜单引导学习路径:agent 设计选项集,本身就是在替学习者圈定决策空间。plan 已经回答了"接下来学什么",微观导航属于学习者。
 
+读字幕/资料为核对做准备,不等于获得预讲许可:读资料是为了核对时落点准确(指明章节/时间戳),不是把内容先讲一遍给用户。学习期开场尤其如此——哪怕刚读完资料,开场仍只做 §11.1 的状态汇报,不铺"地图"、不预告知识点。
+
 ### 2.4 状态优先
 
 每次会话开始,先读:mission.md、state.md、plan.md、profile.md、resources.md、最近一次 dialogue/*.md。不要通读 raw/——那是归档层,仅在整理层信息不足时按需检索。
 
 不要只根据当前聊天临时生成建议。当前对话与已有记录冲突时,先指出冲突,再询问是否更新记录。
+
+**事实来源层级(做出"是否学过/讨论过/完成"类断言时):**
+- 会话记录(dialogue/、raw/、git history)是最终权威。
+- notes/ 和 state.md 是派生物,会滞后或漂移——尤其当某次会话内 agent 做过自我纠正(把"已看"错误回退为"未看"的 fix/correct 提交)后,notes 可能停留在错误状态。
+- 做出"未看/未讨论/未完成"这类否定断言前,先核对话记录;不要只信 notes 文件的状态栏。
+- notes/state 与会话记录冲突时:以会话记录为准,先指出冲突,再修正 notes/state(修正写入文件的修订记录,不静默改)。
 
 ### 2.5 原始记录不可改
 
@@ -135,8 +143,37 @@ python scripts/learning_skill.py init <path> --topic "主题" --goal "目标" --
 learning-topic/
   README.md  mission.md  profile.md  plan.md  state.md  resources.md
   raw/  dialogue/  notes/  tests/  labs/  experiments/
-  videos/  coursepacks/  synthesis/
+  videos/  readings/  coursepacks/  synthesis/
 ```
+
+### 4.3.1 资料落位规则（强制）
+
+建立含公开课、播放列表、论文或作业的学习目录时，必须使用以下唯一入口；禁止为了“按来源归档”再造一套重复目录：
+
+```text
+labs/          可执行作业、starter code、handout、tests；外部作业仓库直接放这里
+videos/        主线与辅助播放列表；逐集介绍、来源、阶段映射、字幕/转写
+readings/      精选论文/教材文件与索引
+coursepacks/   课程身份、版本、schedule、选段说明、官方 lecture/slides 等静态材料
+```
+
+- `coursepacks/` 下不得再建 `labs/`、`assignments/`、`videos/`、`readings/` 或 `supplements/` 来藏实际内容。
+- `labs/`、`videos/` 必须是实际可进入目录，不用软链接伪装入口；避免同一份内容复制两份。外部 Git 作业优先直接作为 `labs/<assignment>` submodule 固定版本。
+- 播放列表在 `videos/<playlist>/README.md` 为**每个视频**写一段介绍，并标明主线/预习/拓展及对应 Stage；只有链接或字幕不算建档完成。
+- `coursepacks/` 只保存同学期课程映射与官方 lecture 原件。PPT/PDF/lecture source 属于 coursepack；作业代码属于 `labs/`；论文正文属于 `readings/`。
+- 批量拉取前，先在回复或 README 给出最终目录树。先落位并验证 1 个 Lab 和 1 个视频，再继续批量，防止全部下载后才发现入口错位。
+
+### 4.3.2 建档验收（报告完成前强制）
+
+批量资料任务结束后，逐项验证：
+
+1. 根 README 有目录地图和主线/辅助边界；
+2. 用户要求的 `labs/`、`videos/`、`readings/` 非空，且入口不是软链接；
+3. 每个 Lab 至少有 README/handout、测试入口或明确的不可本地测试说明；submodule commit 可解析；
+4. 每个视频有来源、介绍、Stage/用途；凡据内容做介绍，必须已取得真实字幕/转写；
+5. 本地论文通过文件格式检查，并在索引写明入选理由与使用 Stage；
+6. 不残留重复的空目录、旧路径引用或半移动的 submodule；运行 `learning_skill.py audit <repo>`；
+7. 只有这些检查通过后，才向用户说“已整理完成”。
 
 ### 4.4 初始文件
 
@@ -201,7 +238,7 @@ python scripts/learning_skill.py entry <repo>
 - **数量阀**:每阶段主线资料 1 份,补充不超过 2 份。整合的价值在筛选,不在堆积。
 - **优先开放资源**;链接验证可访问后才入清单;需要最新资料必须联网检索,不凭记忆给链接或判断时效。
 - **无联网工具时**:不编造。列出"建议查找的资料类型 + 搜索关键词",请用户自行查找后把资料喂回来。
-- **视频**:有官方幻灯片先抓原件——从视频帧重建一份本可下载的 PDF 是浪费。多模态处理与成本分档见 `references/multimodal-video.md`,处理任何视频前必读。
+- **视频**:有官方幻灯片先抓原件——从视频帧重建一份本可下载的 PDF 是浪费。多模态处理与成本分档见 `references/multimodal-video.md`,处理任何视频前必读。播放列表必须逐集写介绍与 Stage 用途；主线和辅助材料明确分开，辅助列表不能悄悄变成第二条必修路线。
 
 ## 7. 学习期答疑
 
@@ -262,7 +299,7 @@ python scripts/learning_skill.py entry <repo>
 
 ## 10. Git 工作流
 
-每次会话结束后更新:
+每次会话结束后更新（批量资料建档还必须先通过 §4.3.2 的目录审计）:
 
 ```text
 raw/        当天原始对话

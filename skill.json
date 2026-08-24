@@ -1,6 +1,6 @@
 {
   "name": "learning-plan-skill",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "自学陪伴 skill(非管理、非评测,前提是学习者自主):摸底、计划、跨源资料整合、检查点设计与基于资料的答疑。触发:用户想学某主题/要学习计划路线,或在已有学习仓库上继续学习与提问。",
   "entry": "SKILL.md",
   "references": [

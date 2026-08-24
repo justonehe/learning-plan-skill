@@ -9,13 +9,14 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_DIR = ROOT / "templates"
 MODES = {"auto", "strong", "qa"}
 DIRS = [
     "raw", "dialogue", "notes", "tests", "labs", "experiments",
-    "videos", "coursepacks", "synthesis", ".learning_skill",
+    "videos", "readings", "coursepacks", "synthesis", ".learning_skill",
 ]
 
 JUDGE_STUB = '''#!/usr/bin/env python3
@@ -113,7 +114,7 @@ def init_cmd(args):
             created.append(rel)
     meta = path / ".learning_skill" / "metadata.json"
     metadata = dict(data)
-    metadata["version"] = "0.5.1"
+    metadata["version"] = "0.6.0"
     meta.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
     inside, _ = run_git(path, ["rev-parse", "--is-inside-work-tree"])
     if inside:
@@ -172,7 +173,13 @@ def video_cmd(args):
     vdir = path / "videos" / slugify(title)
     kdir = vdir / "keyframes"
     kdir.mkdir(parents=True, exist_ok=True)
-    data = {"title": title, "created": now()}
+    data = {
+        "title": title,
+        "created": now(),
+        "overview": args.overview or "待补充（完成建档前必须依据真实字幕/转写填写）",
+        "stage": args.stage,
+        "role": args.role,
+    }
     write_if_missing(vdir / "README.md", render("video_README.md", data))
     (vdir / "source.txt").write_text(str(args.source) + "\n", encoding="utf-8")
 
@@ -218,8 +225,11 @@ def video_cmd(args):
 
     res = path / "resources.md"
     if res.exists():
-        append_text(res, f"| {title} | video | {args.source} | 待补充 | 待补充(入选理由必填) | 待补充 | videos/{slugify(title)}/ |\n")
+        use = args.overview or "待补充(入选理由必填)"
+        append_text(res, f"| {title} | video | {args.source} | {args.stage} | {use} | 待补充 | videos/{slugify(title)}/ |\n")
     print(f"created video record: {vdir}")
+    if not args.overview:
+        print("warning: 视频介绍仍为空;依据真实字幕/转写补完 README 的 Overview 后才算建档完成。")
     print(f"keyframes {'extracted' if extracted else 'directory ready'}: {kdir}")
 
 
@@ -228,7 +238,7 @@ def course_cmd(args):
     ensure_repo_dirs(path)
     title = args.title
     cdir = path / "coursepacks" / slugify(title)
-    for d in ["slides", "labs", "videos", "assignments", "assets"]:
+    for d in ["materials", "assets"]:
         (cdir / d).mkdir(parents=True, exist_ok=True)
     data = {"title": title, "source": args.source, "created": now()}
     write_if_missing(cdir / "README.md", render("coursepack_README.md", data))
@@ -236,11 +246,15 @@ def course_cmd(args):
     write_if_missing(cdir / "extracted-parts.md", render("extracted_parts.md", data))
     write_if_missing(cdir / "notes.md", f"# Notes\n\n- Course: {title}\n- Created: {now()}\n\n")
     if args.syllabus:
-        src = Path(args.syllabus).expanduser()
-        if src.exists():
-            shutil.copy2(src, cdir / src.name)
+        parsed = urlparse(args.syllabus)
+        if parsed.scheme in {"http", "https"}:
+            (cdir / "syllabus.url").write_text(args.syllabus + "\n", encoding="utf-8")
         else:
-            print(f"warning: syllabus 文件不存在: {src}")
+            src = Path(args.syllabus).expanduser()
+            if src.exists():
+                shutil.copy2(src, cdir / src.name)
+            else:
+                print(f"warning: syllabus 文件不存在: {src}")
     res = path / "resources.md"
     if res.exists():
         append_text(res, f"| {title} | coursepack | {args.source} | 待补充 | 只抽取服务目标的部分(理由必填) | 待补充 | coursepacks/{slugify(title)}/ |\n")
@@ -307,6 +321,98 @@ def commit_cmd(args):
               "  git config user.name 'Your Name'\n"
               "  git config user.email 'you@example.com'")
     raise SystemExit(out)
+
+
+def audit_cmd(args):
+    """检查学习仓库的资料入口是否唯一、可见、可进入。"""
+    path = Path(args.path).expanduser().resolve()
+    errors = []
+    for name in ["labs", "videos", "readings", "coursepacks"]:
+        if not (path / name).is_dir():
+            errors.append(f"missing canonical directory: {name}/")
+
+    root_readme = path / "README.md"
+    if root_readme.exists():
+        root_text = root_readme.read_text(encoding="utf-8")
+        for name in ["labs/", "videos/", "readings/", "coursepacks/"]:
+            if name not in root_text:
+                errors.append(f"root README lacks directory-map entry: {name}")
+
+    labs = path / "labs"
+    if labs.is_dir():
+        for item in labs.iterdir():
+            if not item.is_dir():
+                continue
+            if item.is_symlink():
+                errors.append(f"lab entry must not be a symlink: {item.relative_to(path)}")
+                continue
+            has_handout = any(item.glob("*.pdf"))
+            if not ((item / "README.md").exists() or (item / "tests").exists() or has_handout):
+                errors.append(f"lab lacks README/handout/tests: {item.relative_to(path)}")
+            if (item / ".git").exists():
+                ok, _ = run_git(item, ["rev-parse", "HEAD"])
+                if not ok:
+                    errors.append(f"lab git/submodule HEAD is not resolvable: {item.relative_to(path)}")
+
+    videos = path / "videos"
+    if videos.is_dir():
+        for item in videos.iterdir():
+            if not item.is_dir():
+                continue
+            if item.is_symlink():
+                errors.append(f"video entry must not be a symlink: {item.relative_to(path)}")
+                continue
+            readme = item / "README.md"
+            if not readme.exists():
+                errors.append(f"video entry lacks README: {item.relative_to(path)}")
+                continue
+            text = readme.read_text(encoding="utf-8")
+            if "## Overview" not in text and not re.search(r"(?m)^##\s+0?1[.)]", text):
+                errors.append(f"video README lacks per-video overview: {readme.relative_to(path)}")
+            if "## Role in plan" not in text and "对应 Stage" not in text and not re.search(r"Stage\s+\d+", text):
+                errors.append(f"video README lacks stage/role mapping: {readme.relative_to(path)}")
+            manifest = item / "manifest.json"
+            if manifest.exists():
+                try:
+                    entries = json.loads(manifest.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    errors.append(f"invalid video manifest: {manifest.relative_to(path)}")
+                else:
+                    if isinstance(entries, list):
+                        missing = [str(e.get("id")) for e in entries if e.get("id") and str(e.get("id")) not in text]
+                        if missing:
+                            errors.append(f"video README misses {len(missing)} manifest entries: {readme.relative_to(path)}")
+
+    readings = path / "readings"
+    if readings.is_dir():
+        pdfs = list(readings.rglob("*.pdf"))
+        if pdfs and not ((readings / "README.md").exists() or any(readings.glob("*index*.md"))):
+            errors.append("readings with local PDFs must have README/index")
+        for pdf in pdfs:
+            try:
+                valid = pdf.read_bytes()[:4] == b"%PDF"
+            except OSError:
+                valid = False
+            if not valid:
+                errors.append(f"invalid PDF file: {pdf.relative_to(path)}")
+
+    forbidden = {"labs", "assignments", "videos", "readings", "supplements"}
+    coursepacks = path / "coursepacks"
+    if coursepacks.is_dir():
+        for course in coursepacks.iterdir():
+            if not course.is_dir():
+                continue
+            for name in forbidden:
+                duplicate = course / name
+                if duplicate.exists():
+                    errors.append(f"duplicate material entry inside coursepack: {duplicate.relative_to(path)}")
+
+    if errors:
+        print("layout audit FAIL")
+        for error in errors:
+            print("- " + error)
+        raise SystemExit(1)
+    print("layout audit PASS")
 
 
 def entry_cmd(args):
@@ -429,6 +535,9 @@ def main():
     v.add_argument("--title", required=True)
     v.add_argument("--source", required=True)
     v.add_argument("--transcript")
+    v.add_argument("--overview", help="依据真实字幕/转写写的一段视频介绍")
+    v.add_argument("--stage", default="待补充")
+    v.add_argument("--role", default="supplement", choices=["main", "preview", "supplement"])
     v.add_argument("--mode", default="interval", choices=["interval", "scene"])
     v.add_argument("--every-seconds", type=int, default=30)
     v.set_defaults(func=video_cmd)
@@ -443,6 +552,10 @@ def main():
     sy = sub.add_parser("synthesis")
     sy.add_argument("path")
     sy.set_defaults(func=synthesis_cmd)
+
+    au = sub.add_parser("audit")
+    au.add_argument("path")
+    au.set_defaults(func=audit_cmd)
 
     e = sub.add_parser("entry")
     e.add_argument("path")

@@ -14,7 +14,7 @@ learning-plan-skill/
     multimodal-video.md           # 视频多模态:原件优先、成本三档、消化流程
     coursepack-synthesis.md       # 公开课资料包与多源整合:版本配套、衔接与记号
   scripts/
-    learning_skill.py             # 零依赖 CLI(init/session/lab/video/course/synthesis/resource/entry/status/commit)
+    learning_skill.py             # 零依赖 CLI(init/session/lab/video/course/synthesis/resource/audit/entry/status/commit)
     smoke_test.py                 # 快速自测
   templates/                      # 由脚本渲染的文件模板(不进入 agent 上下文)
 ```
@@ -63,6 +63,9 @@ python scripts/learning_skill.py synthesis ~/learning/rl-study
 # 可选:生成学习者入口页(纯链接聚合,派生快照,无进度元素)
 python scripts/learning_skill.py entry ~/learning/rl-study
 
+# 批量资料拉取后的目录审计（完成报告前必须通过）
+python scripts/learning_skill.py audit ~/learning/rl-study
+
 # 状态与提交
 python scripts/learning_skill.py status ~/learning/rl-study
 python scripts/learning_skill.py commit ~/learning/rl-study --message "state: update progress"
@@ -74,6 +77,17 @@ python scripts/learning_skill.py commit ~/learning/rl-study --message "state: up
 每次会话结束,更新:raw/ 原始对话、dialogue/ 整理版、state.md 及相关文件,然后 commit。
 
 完整行为规范见 SKILL.md;检查点、视频、多源整合的细则在 references/ 下,按需加载。
+
+## 资料入口约定
+
+```text
+labs/        实际作业仓库、handout、starter、tests
+videos/      主线/辅助播放列表的逐集介绍、阶段映射和字幕
+readings/    精选论文/教材文件与索引
+coursepacks/ 课程版本、schedule 和官方 lecture/slides 静态原件
+```
+
+这些入口保持唯一。不得把作业和视频先藏进 `coursepacks/` 再通过软链接暴露;播放列表只有字幕而没有逐集介绍也不算建档完成。
 
 ## 依赖
 

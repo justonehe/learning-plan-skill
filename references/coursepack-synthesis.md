@@ -88,5 +88,8 @@ coursepacks/<course>/
   schedule.md         课程结构映射表(讲次 / 幻灯片 / 视频 / lab / 是否采用)
   extracted-parts.md  只记录本计划实际采用的部分
   notes.md            备注
-  slides/  labs/  videos/  assignments/  assets/
+  materials/          官方 lecture source、slides、讲义等同学期静态原件
+  assets/             coursepack 自身需要的图像等资产
 ```
+
+实际学习入口保持唯一：作业仓库放根级 `labs/`，视频逐集记录放根级 `videos/`，论文/教材文件放根级 `readings/`。`schedule.md` 可以链接它们，但不得在 coursepack 内复制或另建 `labs/assignments/videos/readings/supplements`。外部作业若用 Git submodule，直接建在 `labs/<assignment>`，不要先放进 coursepack 再用软链接暴露。
